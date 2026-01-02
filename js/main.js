@@ -56,19 +56,26 @@ function init() {
     }
 
     setupEventListeners();
+
+    // Explicitly show main menu and ensure it's on top
     showMainMenu();
+}
+
+function playSound(type) {
+    if (!audio.ctx) audio.init();
+    audio.play(type);
 }
 
 function showMainMenu() {
     stopTimer();
     mainMenuOverlay.classList.remove('hidden');
-    // Don't hide board, but maybe blur it? Or just overlay is enough.
-    // Reset UI state if coming from game?
-    modalOverlay.classList.add('hidden'); // Hide end game modal if open
+    modalOverlay.classList.add('hidden'); // Ensure end game modal is gone
 }
 
 function startGame() {
+    playSound('click');
     mainMenuOverlay.classList.add('hidden');
+    // Ensure we start a new game with current config
     startNewGame(currentDifficulty);
 }
 
@@ -79,16 +86,20 @@ function startNewGame(difficultyKey) {
     let config = DIFFICULTY[difficultyKey];
 
     if (difficultyKey === 'custom') {
-        const rows = parseInt(document.getElementById('custom-rows').value);
-        const cols = parseInt(document.getElementById('custom-cols').value);
-        const mines = parseInt(document.getElementById('custom-mines').value);
+        const rows = parseInt(document.getElementById('custom-rows').value) || 16;
+        const cols = parseInt(document.getElementById('custom-cols').value) || 30;
+        const mines = parseInt(document.getElementById('custom-mines').value) || 99;
         config = { rows, cols, mines };
     }
 
-    currentGame = new Minesweeper(config.rows, config.cols, config.mines);
-
-    renderer.initBoard(config.rows, config.cols);
-    renderer.render(currentGame);
+    try {
+        currentGame = new Minesweeper(config.rows, config.cols, config.mines);
+        renderer.initBoard(config.rows, config.cols);
+        renderer.render(currentGame);
+    } catch (e) {
+        console.error("Failed to start game:", e);
+        alert("Error starting game. Please try a different difficulty.");
+    }
 }
 
 function resetUI() {
@@ -142,10 +153,18 @@ function setupEventListeners() {
     });
 
     // HUD Buttons
-    restartBtn.addEventListener('click', () => startNewGame(currentDifficulty));
-    hudMenuBtn.addEventListener('click', showMainMenu);
+    restartBtn.addEventListener('click', () => {
+        playSound('click');
+        startNewGame(currentDifficulty);
+    });
+
+    hudMenuBtn.addEventListener('click', () => {
+        playSound('click');
+        showMainMenu();
+    });
 
     difficultyBtn.addEventListener('click', (e) => {
+        playSound('click');
         e.stopPropagation();
         difficultyMenu.classList.toggle('hidden');
     });
@@ -156,6 +175,7 @@ function setupEventListeners() {
     // Difficulty Menu (HUD Dropdown)
     difficultyMenu.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => {
+            playSound('click');
             const diff = btn.dataset.diff;
             if (diff === 'custom') {
                 modalOverlay.classList.remove('hidden');
@@ -173,29 +193,31 @@ function setupEventListeners() {
     btnPlayMenu.addEventListener('click', startGame);
 
     document.querySelectorAll('.diff-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            playSound('click');
             const diff = btn.dataset.diff;
-            if (diff === 'custom') {
-                 // If clicking custom in main menu, maybe verify values?
-                 // Just open modal to edit if needed, or select it.
-                 // Let's just select it. Edit button is separate.
-                 updateDifficultySelection('custom');
-                 return;
-            }
             updateDifficultySelection(diff);
         });
     });
 
     btnEditCustom.addEventListener('click', () => {
+        playSound('click');
         modalOverlay.classList.remove('hidden');
         customModal.classList.remove('hidden');
     });
 
-    btnThemeMenu.addEventListener('click', toggleTheme);
-    themeBtn.addEventListener('click', toggleTheme);
+    btnThemeMenu.addEventListener('click', () => {
+        playSound('click');
+        toggleTheme();
+    });
+    themeBtn.addEventListener('click', () => {
+        playSound('click');
+        toggleTheme();
+    });
 
     // Custom Game Modal
     btnStartCustom.addEventListener('click', () => {
+        playSound('click');
         const rows = parseInt(document.getElementById('custom-rows').value);
         const cols = parseInt(document.getElementById('custom-cols').value);
         const mines = parseInt(document.getElementById('custom-mines').value);
@@ -208,24 +230,29 @@ function setupEventListeners() {
         document.getElementById('preview-text').textContent = `${rows}x${cols} • ${mines} Mines`;
         updateDifficultySelection('custom');
 
-        // If coming from Main Menu, just close modal. If from HUD, start game.
-        // We can check visibility of main menu.
         modalOverlay.classList.add('hidden');
         customModal.classList.add('hidden');
 
+        // If Play was clicked from menu, this prepares it.
+        // If we want this "Start" to actually START the game:
         if (mainMenuOverlay.classList.contains('hidden')) {
             startNewGame('custom');
         }
     });
 
     btnCancelCustom.addEventListener('click', () => {
+        playSound('click');
         modalOverlay.classList.add('hidden');
         customModal.classList.add('hidden');
     });
 
     // End Game Modal
-    btnPlayAgain.addEventListener('click', () => startNewGame(currentDifficulty));
+    btnPlayAgain.addEventListener('click', () => {
+        playSound('click');
+        startNewGame(currentDifficulty);
+    });
     btnMenu.addEventListener('click', () => {
+        playSound('click');
         modalOverlay.classList.add('hidden');
         showMainMenu();
     });
