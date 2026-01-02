@@ -37,7 +37,12 @@ const btnStartCustom = document.getElementById('btn-start-custom');
 const btnCancelCustom = document.getElementById('btn-cancel-custom');
 const themeBtn = document.getElementById('btn-theme');
 
-// Audio Context (Lazy init)
+const mainMenuOverlay = document.getElementById('main-menu-overlay');
+const btnPlayMenu = document.getElementById('btn-play-menu');
+const btnThemeMenu = document.getElementById('btn-theme-menu');
+const hudMenuBtn = document.getElementById('btn-hud-menu');
+const customPreview = document.getElementById('custom-params-preview');
+const btnEditCustom = document.getElementById('btn-edit-custom');
 
 function init() {
     renderer = new Renderer(boardEl, {
@@ -50,8 +55,21 @@ function init() {
         document.body.classList.add('dark-mode');
     }
 
-    startNewGame(currentDifficulty);
     setupEventListeners();
+    showMainMenu();
+}
+
+function showMainMenu() {
+    stopTimer();
+    mainMenuOverlay.classList.remove('hidden');
+    // Don't hide board, but maybe blur it? Or just overlay is enough.
+    // Reset UI state if coming from game?
+    modalOverlay.classList.add('hidden'); // Hide end game modal if open
+}
+
+function startGame() {
+    mainMenuOverlay.classList.add('hidden');
+    startNewGame(currentDifficulty);
 }
 
 function startNewGame(difficultyKey) {
@@ -83,47 +101,59 @@ function resetUI() {
     particles.stop();
 }
 
+function updateDifficultySelection(diff) {
+    currentDifficulty = diff;
+    difficultyLabel.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
+
+    // Update Menu Buttons State
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+        if (btn.dataset.diff === diff) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+
+    // Handle Custom Preview
+    if (diff === 'custom') {
+        customPreview.classList.remove('hidden');
+    } else {
+        customPreview.classList.add('hidden');
+    }
+}
+
 function setupEventListeners() {
     // Board Interactions
     boardEl.addEventListener('mousedown', handleTileInput);
-    boardEl.addEventListener('contextmenu', (e) => e.preventDefault()); // Disable context menu
+    boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    // Touch support for mobile (long press to flag)
+    // Touch support
     let touchTimer = null;
     let isLongPress = false;
-
     boardEl.addEventListener('touchstart', (e) => {
         if (!e.target.classList.contains('tile')) return;
         isLongPress = false;
         touchTimer = setTimeout(() => {
             isLongPress = true;
             handleTileAction(e.target, 'flag');
-            // Provide haptic feedback if possible
             if (navigator.vibrate) navigator.vibrate(50);
-        }, 500); // 500ms long press
+        }, 500);
     }, { passive: true });
-
     boardEl.addEventListener('touchend', (e) => {
         clearTimeout(touchTimer);
-        if (isLongPress) {
-            e.preventDefault(); // Prevent click
-        }
+        if (isLongPress) e.preventDefault();
     });
 
-    // UI Buttons
+    // HUD Buttons
     restartBtn.addEventListener('click', () => startNewGame(currentDifficulty));
+    hudMenuBtn.addEventListener('click', showMainMenu);
 
     difficultyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         difficultyMenu.classList.toggle('hidden');
     });
-
     document.addEventListener('click', (e) => {
-        if (!difficultyBtn.contains(e.target)) {
-            difficultyMenu.classList.add('hidden');
-        }
+        if (!difficultyBtn.contains(e.target)) difficultyMenu.classList.add('hidden');
     });
 
+    // Difficulty Menu (HUD Dropdown)
     difficultyMenu.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => {
             const diff = btn.dataset.diff;
@@ -133,14 +163,38 @@ function setupEventListeners() {
                 difficultyMenu.classList.add('hidden');
                 return;
             }
-            currentDifficulty = diff;
-            difficultyLabel.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
+            updateDifficultySelection(diff);
             startNewGame(diff);
             difficultyMenu.classList.add('hidden');
         });
     });
 
-    // Custom Game Handlers
+    // Main Menu Buttons
+    btnPlayMenu.addEventListener('click', startGame);
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const diff = btn.dataset.diff;
+            if (diff === 'custom') {
+                 // If clicking custom in main menu, maybe verify values?
+                 // Just open modal to edit if needed, or select it.
+                 // Let's just select it. Edit button is separate.
+                 updateDifficultySelection('custom');
+                 return;
+            }
+            updateDifficultySelection(diff);
+        });
+    });
+
+    btnEditCustom.addEventListener('click', () => {
+        modalOverlay.classList.remove('hidden');
+        customModal.classList.remove('hidden');
+    });
+
+    btnThemeMenu.addEventListener('click', toggleTheme);
+    themeBtn.addEventListener('click', toggleTheme);
+
+    // Custom Game Modal
     btnStartCustom.addEventListener('click', () => {
         const rows = parseInt(document.getElementById('custom-rows').value);
         const cols = parseInt(document.getElementById('custom-cols').value);
@@ -151,9 +205,17 @@ function setupEventListeners() {
             return;
         }
 
-        currentDifficulty = 'custom';
-        difficultyLabel.textContent = 'Custom';
-        startNewGame('custom');
+        document.getElementById('preview-text').textContent = `${rows}x${cols} • ${mines} Mines`;
+        updateDifficultySelection('custom');
+
+        // If coming from Main Menu, just close modal. If from HUD, start game.
+        // We can check visibility of main menu.
+        modalOverlay.classList.add('hidden');
+        customModal.classList.add('hidden');
+
+        if (mainMenuOverlay.classList.contains('hidden')) {
+            startNewGame('custom');
+        }
     });
 
     btnCancelCustom.addEventListener('click', () => {
@@ -161,30 +223,29 @@ function setupEventListeners() {
         customModal.classList.add('hidden');
     });
 
-    // Theme Toggle
-    themeBtn.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        const isDark = document.body.classList.contains('dark-mode');
-        localStorage.setItem('minesweeper_theme', isDark ? 'dark' : 'light');
-    });
-
+    // End Game Modal
     btnPlayAgain.addEventListener('click', () => startNewGame(currentDifficulty));
     btnMenu.addEventListener('click', () => {
         modalOverlay.classList.add('hidden');
+        showMainMenu();
     });
 }
 
-function handleTileInput(e) {
-    // Init audio on first interaction
-    if (!audio.ctx) audio.init();
+function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('minesweeper_theme', isDark ? 'dark' : 'light');
+}
 
+function handleTileInput(e) {
+    if (!audio.ctx) audio.init();
     const tile = e.target.closest('.tile');
     if (!tile) return;
 
-    if (e.button === 2) { // Right click
+    if (e.button === 2) {
         e.preventDefault();
         handleTileAction(tile, 'flag');
-    } else if (e.button === 0) { // Left click
+    } else if (e.button === 0) {
         handleTileAction(tile, 'reveal');
     }
 }
@@ -195,10 +256,6 @@ function handleTileAction(tileElement, action) {
     const row = parseInt(tileElement.dataset.row);
     const col = parseInt(tileElement.dataset.col);
 
-    // Track previous state to determine sound
-    const wasFlagged = currentGame.board[row][col].isFlagged;
-
-    // Game Logic
     currentGame.handleInteraction(row, col, action);
 
     // Sound Logic
@@ -224,12 +281,10 @@ function handleTileAction(tileElement, action) {
         }
     }
 
-    // Render
     renderer.render(currentGame, { row, col });
 }
 
 function startTimer() {
-    const startTime = Date.now(); // Or use game.startTime
     timerInterval = setInterval(() => {
         const delta = Math.floor((Date.now() - currentGame.startTime) / 1000);
         const display = Math.min(delta, 999);
@@ -246,37 +301,27 @@ function showEndGameModal() {
     const isWin = currentGame.status === GAME_STATUS.WON;
     document.getElementById('end-game-title').textContent = isWin ? 'Victory!' : 'Game Over';
     const breakdown = document.querySelector('.score-breakdown');
-
-    // Always calculate score
     const stats = currentGame.getScore();
 
     document.getElementById('score-base').textContent = stats.base;
     document.getElementById('score-time').textContent = stats.timeBonus;
     document.getElementById('score-difficulty').textContent = stats.mineBonus;
-    document.getElementById('score-penalty').textContent = '0'; // Implemented simplified scoring for now
+    document.getElementById('score-penalty').textContent = '0';
     document.getElementById('score-total').textContent = stats.total;
 
     breakdown.style.display = 'block';
-
     const highScoreEl = document.getElementById('new-best');
     highScoreEl.classList.add('hidden');
 
     if (isWin) {
-        // Confetti
         particles.startConfetti();
-
-        // Check High Score
         const savedScore = localStorage.getItem(`minesweeper_hs_${currentDifficulty}`);
         if (!savedScore || stats.total > parseInt(savedScore)) {
             localStorage.setItem(`minesweeper_hs_${currentDifficulty}`, stats.total);
             highScoreEl.classList.remove('hidden');
         }
-    } else {
-        // If lost, maybe dim the score values or show them in red
-        // For now just showing them is fine to show progress
     }
 
-    // Delay slightly to let user see board
     setTimeout(() => {
         modalOverlay.classList.remove('hidden');
         endGameModal.classList.remove('hidden');

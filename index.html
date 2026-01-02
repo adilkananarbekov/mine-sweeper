@@ -11,6 +11,10 @@
     <div class="app-container">
         <!-- Header / HUD -->
         <header class="hud">
+            <div class="hud-item menu-container">
+                <button id="btn-hud-menu" class="hud-btn" aria-label="Menu">☰</button>
+            </div>
+
             <div class="hud-item difficulty-select">
                 <button id="btn-difficulty" class="hud-btn" aria-label="Change Difficulty">
                     <span id="current-difficulty">Medium</span>
@@ -56,6 +60,36 @@
         </main>
 
         <!-- Modals / Overlays -->
+
+        <!-- Main Menu Overlay -->
+        <div id="main-menu-overlay" class="modal-overlay">
+            <div class="modal menu-modal">
+                <h1 class="game-title">Minesweeper</h1>
+
+                <div class="menu-section">
+                    <h3>Difficulty</h3>
+                    <div class="difficulty-selector-group">
+                        <button class="diff-btn" data-diff="easy">Easy</button>
+                        <button class="diff-btn active" data-diff="medium">Medium</button>
+                        <button class="diff-btn" data-diff="hard">Hard</button>
+                        <button class="diff-btn" data-diff="custom">Custom</button>
+                    </div>
+                    <div id="custom-params-preview" class="hidden">
+                        <span id="preview-text">16x30 • 99 Mines</span>
+                        <button id="btn-edit-custom" class="small-btn">Edit</button>
+                    </div>
+                </div>
+
+                <div class="menu-section">
+                    <button id="btn-play-menu" class="primary-btn large-btn">PLAY</button>
+                </div>
+
+                <div class="menu-footer">
+                    <button id="btn-theme-menu" class="secondary-btn">Toggle Theme</button>
+                </div>
+            </div>
+        </div>
+
         <div id="modal-overlay" class="modal-overlay hidden">
             <!-- End Game Modal -->
             <div id="end-game-modal" class="modal hidden">
