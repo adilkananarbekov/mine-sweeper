@@ -33,6 +33,10 @@
                 <button id="btn-restart" class="emoji-btn" aria-label="Restart Game">🙂</button>
             </div>
 
+            <div class="hud-item theme-container">
+                <button id="btn-theme" class="hud-btn" aria-label="Toggle Theme">🌗</button>
+            </div>
+
             <div class="hud-item counter-container">
                 <div class="icon-timer">⏱️</div>
                 <div class="counter-text" id="timer">000</div>
@@ -67,6 +71,29 @@
                 <div class="modal-actions">
                     <button id="btn-play-again" class="primary-btn">Play Again</button>
                     <button id="btn-menu" class="secondary-btn">Menu</button>
+                </div>
+            </div>
+
+            <!-- Custom Difficulty Modal -->
+            <div id="custom-game-modal" class="modal hidden">
+                <h2>Custom Game</h2>
+                <div class="custom-inputs">
+                    <div class="input-group">
+                        <label for="custom-rows">Rows</label>
+                        <input type="number" id="custom-rows" min="5" max="50" value="16">
+                    </div>
+                    <div class="input-group">
+                        <label for="custom-cols">Cols</label>
+                        <input type="number" id="custom-cols" min="5" max="50" value="30">
+                    </div>
+                    <div class="input-group">
+                        <label for="custom-mines">Mines</label>
+                        <input type="number" id="custom-mines" min="1" max="999" value="99">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="btn-start-custom" class="primary-btn">Start</button>
+                    <button id="btn-cancel-custom" class="secondary-btn">Cancel</button>
                 </div>
             </div>
         </div>

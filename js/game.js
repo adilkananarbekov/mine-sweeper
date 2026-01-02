@@ -53,12 +53,34 @@ export class Minesweeper {
         if (this.status === GAME_STATUS.WON || this.status === GAME_STATUS.LOST) return;
 
         if (action === 'reveal') {
-            this._reveal(row, col);
+            const tile = this.board[row][col];
+            if (tile.isRevealed) {
+                this._chord(row, col);
+            } else {
+                this._reveal(row, col);
+            }
         } else if (action === 'flag') {
             this._toggleFlag(row, col);
         }
 
         this._emitChange();
+    }
+
+    _chord(row, col) {
+        const tile = this.board[row][col];
+        if (!tile.isRevealed || tile.neighborCount === 0) return;
+
+        const neighbors = this._getNeighbors(row, col);
+        const flaggedCount = neighbors.filter(n => n.isFlagged).length;
+
+        if (flaggedCount === tile.neighborCount) {
+            // Reveal all non-flagged neighbors
+            neighbors.forEach(n => {
+                if (!n.isFlagged && !n.isRevealed) {
+                    this._reveal(n.row, n.col);
+                }
+            });
+        }
     }
 
     _reveal(row, col) {

@@ -1,6 +1,7 @@
 import { Minesweeper, GAME_STATUS } from './game.js';
 import { Renderer } from './renderer.js';
 import { SoundManager } from './audio.js';
+import { ParticleSystem } from './particles.js';
 
 // Configuration
 const DIFFICULTY = {
@@ -12,6 +13,7 @@ const DIFFICULTY = {
 let currentGame = null;
 let renderer = null;
 let audio = new SoundManager();
+let particles = new ParticleSystem();
 let timerInterval = null;
 let currentDifficulty = 'medium';
 
@@ -30,6 +32,11 @@ const endGameModal = document.getElementById('end-game-modal');
 const btnPlayAgain = document.getElementById('btn-play-again');
 const btnMenu = document.getElementById('btn-menu');
 
+const customModal = document.getElementById('custom-game-modal');
+const btnStartCustom = document.getElementById('btn-start-custom');
+const btnCancelCustom = document.getElementById('btn-cancel-custom');
+const themeBtn = document.getElementById('btn-theme');
+
 // Audio Context (Lazy init)
 
 function init() {
@@ -37,6 +44,11 @@ function init() {
         mineCount: mineCountEl,
         restartBtn: restartBtn
     });
+
+    // Init theme
+    if (localStorage.getItem('minesweeper_theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+    }
 
     startNewGame(currentDifficulty);
     setupEventListeners();
@@ -46,13 +58,16 @@ function startNewGame(difficultyKey) {
     stopTimer();
     resetUI();
 
-    // Config
-    const config = DIFFICULTY[difficultyKey]; // TODO: Custom logic
-    currentGame = new Minesweeper(config.rows, config.cols, config.mines);
+    let config = DIFFICULTY[difficultyKey];
 
-    // Set tile size based on board density vs screen size?
-    // CSS handles responsiveness somewhat, but we might want dynamic sizing for large grids.
-    // For now, let's keep CSS default and rely on scrolling for very large grids on small screens.
+    if (difficultyKey === 'custom') {
+        const rows = parseInt(document.getElementById('custom-rows').value);
+        const cols = parseInt(document.getElementById('custom-cols').value);
+        const mines = parseInt(document.getElementById('custom-mines').value);
+        config = { rows, cols, mines };
+    }
+
+    currentGame = new Minesweeper(config.rows, config.cols, config.mines);
 
     renderer.initBoard(config.rows, config.cols);
     renderer.render(currentGame);
@@ -63,7 +78,9 @@ function resetUI() {
     scoreEl.textContent = '0';
     modalOverlay.classList.add('hidden');
     endGameModal.classList.add('hidden');
+    customModal.classList.add('hidden');
     difficultyMenu.classList.add('hidden');
+    particles.stop();
 }
 
 function setupEventListeners() {
@@ -111,7 +128,9 @@ function setupEventListeners() {
         btn.addEventListener('click', () => {
             const diff = btn.dataset.diff;
             if (diff === 'custom') {
-                alert('Custom difficulty not implemented yet.'); // Placeholder
+                modalOverlay.classList.remove('hidden');
+                customModal.classList.remove('hidden');
+                difficultyMenu.classList.add('hidden');
                 return;
             }
             currentDifficulty = diff;
@@ -121,10 +140,37 @@ function setupEventListeners() {
         });
     });
 
+    // Custom Game Handlers
+    btnStartCustom.addEventListener('click', () => {
+        const rows = parseInt(document.getElementById('custom-rows').value);
+        const cols = parseInt(document.getElementById('custom-cols').value);
+        const mines = parseInt(document.getElementById('custom-mines').value);
+
+        if (mines >= rows * cols) {
+            alert("Too many mines!");
+            return;
+        }
+
+        currentDifficulty = 'custom';
+        difficultyLabel.textContent = 'Custom';
+        startNewGame('custom');
+    });
+
+    btnCancelCustom.addEventListener('click', () => {
+        modalOverlay.classList.add('hidden');
+        customModal.classList.add('hidden');
+    });
+
+    // Theme Toggle
+    themeBtn.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('minesweeper_theme', isDark ? 'dark' : 'light');
+    });
+
     btnPlayAgain.addEventListener('click', () => startNewGame(currentDifficulty));
     btnMenu.addEventListener('click', () => {
         modalOverlay.classList.add('hidden');
-        // Maybe open menu? For now just hide modal.
     });
 }
 
@@ -216,6 +262,9 @@ function showEndGameModal() {
     highScoreEl.classList.add('hidden');
 
     if (isWin) {
+        // Confetti
+        particles.startConfetti();
+
         // Check High Score
         const savedScore = localStorage.getItem(`minesweeper_hs_${currentDifficulty}`);
         if (!savedScore || stats.total > parseInt(savedScore)) {
